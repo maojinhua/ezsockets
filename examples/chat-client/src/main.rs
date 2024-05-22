@@ -28,10 +28,15 @@ impl ezsockets::ClientExt for Client {
 async fn main() {
     tracing_subscriber::fmt::init();
     let config = ClientConfig::new("ws://localhost:8080/websocket");
+    // 如果加上这句话则会触发 服务端的 kick_me 逻辑
+    // config = config.query_parameter("kick_me", "Yes");
+    // 调用 connect 方法连接 socket
     let (handle, future) = ezsockets::connect(|_client| Client {}, config).await;
     tokio::spawn(async move {
         future.await.unwrap();
     });
+
+    // 监听标准输入，如果有输入的话则通过 websocket 发送消息
     let stdin = std::io::stdin();
     let lines = stdin.lock().lines();
     for line in lines {

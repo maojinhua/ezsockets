@@ -55,7 +55,7 @@ async fn main() {
     let mut args = std::env::args();
     let url = args
         .nth(1)
-        .unwrap_or_else(|| "ws://127.0.0.1:8080".to_string());
+        .unwrap_or_else(|| "ws://127.0.0.1:8080/websocket".to_string());
     let url = Url::parse(&url).unwrap();
     let config = ClientConfig::new(url);
     let (handle, future) = ezsockets::connect(|handle| Client { handle }, config).await;

@@ -21,6 +21,7 @@ enum ChatMessage {
 }
 
 struct ChatServer {
+    // server 里面包含了客户端 所有的 session
     sessions: HashMap<SessionID, Session>,
     handle: Server<Self>,
 }
@@ -61,6 +62,7 @@ impl ezsockets::ServerExt for ChatServer {
     async fn on_call(&mut self, call: Self::Call) -> Result<(), Error> {
         match call {
             ChatMessage::Send { text, from } => {
+                // 过滤掉 id 是 发送方消息的
                 let sessions = self.sessions.iter().filter(|(id, _)| from != **id);
                 let text = format!("from {from}: {text}");
                 for (id, handle) in sessions {
@@ -88,6 +90,7 @@ impl ezsockets::SessionExt for ChatSession {
     }
     async fn on_text(&mut self, text: String) -> Result<(), Error> {
         tracing::info!("received: {text}");
+        // 调用 server 的 call 方法
         self.server
             .call(ChatMessage::Send {
                 from: self.id,
@@ -115,8 +118,10 @@ async fn main() {
         handle,
     });
 
+    // 创建 websocket router,并且把 server 传递过去
     let app = Router::new()
         .route("/websocket", get(websocket_handler))
+        .route("/send", get(send))
         .layer(Extension(server.clone()));
 
     let address = SocketAddr::from(([127, 0, 0, 1], 8080));
@@ -133,6 +138,7 @@ async fn main() {
     let lines = stdin.lock().lines();
     for line in lines {
         let line = line.unwrap();
+        // 调用 server 的 call 函数
         server
             .call(ChatMessage::Send {
                 text: line,
@@ -150,6 +156,7 @@ async fn websocket_handler(
     let kick_me = query.get("kick_me");
     let kick_me = kick_me.map(|s| s.as_str());
     if matches!(kick_me, Some("Yes")) {
+        tracing::error!("kick me");
         return (
             axum::http::StatusCode::BAD_REQUEST,
             "we won't accept you because of kick_me query parameter",
@@ -157,4 +164,16 @@ async fn websocket_handler(
             .into_response();
     }
     ezsocket.on_upgrade(server)
+}
+
+async fn send(
+    Extension(server): Extension<Server<ChatServer>>,
+    Query(query): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    server
+        .call(ChatMessage::Send {
+            text: "别的 handler 发送的消息".to_string(),
+            from: SessionID::MAX, // reserve some ID for the server
+        })
+        .unwrap();
 }

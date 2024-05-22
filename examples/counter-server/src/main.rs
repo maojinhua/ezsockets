@@ -63,6 +63,7 @@ impl ezsockets::ServerExt for CounterServer {
     }
 }
 
+// 每个 session 有自己的计数器，实现不同客户端发送的数据不同
 struct CounterSession {
     handle: Session,
     id: SessionID,
@@ -101,6 +102,7 @@ impl ezsockets::SessionExt for CounterSession {
         unimplemented!()
     }
 
+    
     async fn on_call(&mut self, call: Self::Call) -> Result<(), Error> {
         match call {
             Message::Increment => self.counter += 1,

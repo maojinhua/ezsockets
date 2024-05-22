@@ -186,6 +186,7 @@ impl ezsockets::SessionExt for SessionActor {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+    // 创建服务
     let (server, _) = Server::create(|handle| ChatServer {
         sessions: HashMap::new(),
         rooms: HashMap::from_iter([(DEFAULT_ROOM.to_string(), vec![])]),
